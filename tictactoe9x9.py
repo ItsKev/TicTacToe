@@ -60,7 +60,13 @@ class Helper:
                 for r in range(3):
                     if board.playground[row + r][col + c] == 0:
                         board.playground[row + r][col + c] = 2
-        if board.playground_grid[int(next_row / 3)][int(next_col / 3)] != 0:
+        is_full = True
+        for c in range(3):
+            for r in range(3):
+                if board.playground[next_row + r][next_col + c] == 0:
+                    is_full = False
+                    break
+        if is_full:
             return -1, -1
         return next_row, next_col
 
@@ -108,11 +114,11 @@ class MCTS:
         next_row, next_col = board.playground_next_row_col
         for row in range(board.playground_next_board_size):
             for col in range(board.playground_next_board_size):
-                if board.playground[row + next_row][col + next_col] \
-                        == 0:
+                if board.playground[row + next_row][col + next_col] == 0:
                     plays_left = True
                     break
         if not plays_left:
+            print("No plays left", file=sys.stderr)
             return node
 
         if not node.children:
@@ -228,15 +234,17 @@ class Main:
                 simulated_reward = mcts.simulate(test_playground, selected_node)
                 mcts.backtrack(selected_node, simulated_reward)
 
-            highest_value_move = (0, (-1, -1))
+            highest_value_move = (-1, (-1, -1))
             for master_child in master_node.children:
                 if master_child.visited > highest_value_move[0]:
                     highest_value_move = (master_child.visited, master_child.action)
+
             # Write an action using print
             # To debug: print("Debug messages...", file=sys.stderr)
 
             print(master_node.visited, file=sys.stderr)
             board.playground[highest_value_move[1][0]][highest_value_move[1][1]] = 1
+            Helper.lock_won_playgrounds(board)
             print(str(highest_value_move[1][0]) + " " + str(highest_value_move[1][1]))
 
 
