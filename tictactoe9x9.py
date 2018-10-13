@@ -1,4 +1,5 @@
 import copy
+import sys
 
 import numpy as np
 import math
@@ -35,7 +36,7 @@ class Board:
         self.playground = np.zeros((9, 9), dtype=int)
         self.playground_grid = np.zeros((3, 3), dtype=int)
         self.playground_next_board_size = 9
-        self.playground_next_row_col = (-1, -1)
+        self.playground_next_row_col = (0, 0)
 
 
 class Helper:
@@ -195,18 +196,48 @@ class Main:
 
     def __init__(self) -> None:
         board = Board()
-        mcts = MCTS()
+        # game loop
+        while True:
+            opponent_row, opponent_col = [int(i) for i in input().split()]
 
-        master_node = Node(None, (-1, -1), -1)
+            if opponent_row != -1:
+                board.playground[opponent_row][opponent_col] = -1
+                next_playground = Helper.get_next_playground(board, opponent_row, opponent_col)
+                if next_playground == (-1, -1):
+                    board.playground_next_board_size = 9
+                    board.playground_next_row_col = (0, 0)
+                else:
+                    board.playground_next_board_size = 3
+                    board.playground_next_row_col = next_playground
 
-        start_time = time.time()
-        while time.time() - start_time < 0.8:
-            test_playground = copy.deepcopy(board)
-            selected_node = mcts.selection_expansion(test_playground, master_node)
-            simulated_reward = mcts.simulate(test_playground, selected_node)
-            mcts.backtrack(selected_node, simulated_reward)
+            valid_action_count = int(input())
+            for i in range(valid_action_count):
+                _, _ = [int(j) for j in input().split()]
 
-        print("Finished")
+            Helper.lock_won_playgrounds(board)
+
+            master_node = Node(None, (-1, -1), -1)
+            Node.total_plays = 0
+
+            mcts = MCTS()
+
+            start_time = time.time()
+            while time.time() - start_time < 0.09:
+                test_playground = copy.deepcopy(board)
+                selected_node = mcts.selection_expansion(test_playground, master_node)
+                simulated_reward = mcts.simulate(test_playground, selected_node)
+                mcts.backtrack(selected_node, simulated_reward)
+
+            highest_value_move = (0, (-1, -1))
+            for master_child in master_node.children:
+                if master_child.visited > highest_value_move[0]:
+                    highest_value_move = (master_child.visited, master_child.action)
+            # Write an action using print
+            # To debug: print("Debug messages...", file=sys.stderr)
+
+            print(master_node.visited, file=sys.stderr)
+            board.playground[highest_value_move[1][0]][highest_value_move[1][1]] = 1
+            print(str(highest_value_move[1][0]) + " " + str(highest_value_move[1][1]))
 
 
 if __name__ == '__main__':
