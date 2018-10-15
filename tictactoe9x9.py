@@ -160,7 +160,7 @@ class MCTS:
 
         return self.selection_expansion(board, next_node)
 
-    def simulate(self, board: Board, node: Node) -> float:
+    def simulate(self, board: Board, node: Node, board_orig: Board) -> float:
         lastrow, lastcol = node.action
         player = node.player
         Helper.lock_won_playgrounds(board)
@@ -182,17 +182,10 @@ class MCTS:
             else:
                 break
         if count > 20:
-            p1 = 0
-            p2 = 0
-            for row in range(3):
-                for col in range(3):
-                    value = board.playground_grid[row][col]
-                    if value == 1:
-                        p1 += 1
-                    elif value == -1:
-                        p2 += 1
-            if p1 is not 0 and p2 is not 0 and p1 != p2:
-                return 1 if p1 > p2 else 0
+            lastrow, lastcol = node.action
+            victory = Helper.checkVictory(board_orig.playground, int(lastrow / 3) * 3, int(lastcol / 3) * 3)
+            if victory != 0:
+                return 1 if victory == 1 else 0
 
         return 0.5
 
@@ -257,7 +250,7 @@ class Main:
             while time.time() - start_time < 0.096:
                 test_playground = copy.deepcopy(board)
                 selected_node = mcts.selection_expansion(test_playground, master_node)
-                simulated_reward = mcts.simulate(test_playground, selected_node)
+                simulated_reward = mcts.simulate(test_playground, selected_node, board)
                 mcts.backtrack(selected_node, simulated_reward)
 
             highest_value_move = (-1, (-1, -1))
