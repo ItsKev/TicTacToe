@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import math
 import time
+from random import randint
 
 
 class Node:
@@ -119,6 +120,7 @@ class MCTS:
                     break
         if not plays_left:
             print("No plays left", file=sys.stderr)
+            # TODO: fix bug when board almost full
             return node
 
         if not node.children:
@@ -162,7 +164,9 @@ class MCTS:
         lastrow, lastcol = node.action
         player = node.player
         Helper.lock_won_playgrounds(board)
-        while any(0 in subl for subl in board.playground):
+        count = 0
+        while any(0 in subl for subl in board.playground) and count <= 20:
+            count += 1
             next_play = Helper.get_next_playground(board, lastrow, lastcol)
             winner = Helper.checkVictory(board.playground_grid, 0, 0)
             if winner != 0:
@@ -177,18 +181,40 @@ class MCTS:
                 lastcol = last_play[1]
             else:
                 break
+        if count > 20:
+            p1 = 0
+            p2 = 0
+            for row in range(3):
+                for col in range(3):
+                    value = board.playground_grid[row][col]
+                    if value == 1:
+                        p1 += 1
+                    elif value == -1:
+                        p2 += 1
+            if p1 is not 0 and p2 is not 0 and p1 != p2:
+                return 1 if p1 > p2 else 0
+
         return 0.5
 
     def play_random_position(self, board, player, size, next_row, next_col) -> (int, int):
+
+        has_number = False
         for col in range(size):
             for row in range(size):
                 if board.playground[next_row + row][next_col + col] == 0:
-                    if player == 0:
-                        board.playground[next_row + row][next_col + col] = 1
-                    else:
-                        board.playground[next_row + row][next_col + col] = -1
-                    return next_row + row, next_col + col
-        return -1, -1
+                    has_number = True
+        if not has_number:
+            return -1, -1
+
+        while True:
+            col = randint(0, size - 1)
+            row = randint(0, size - 1)
+            if board.playground[next_row + row][next_col + col] == 0:
+                if player == 0:
+                    board.playground[next_row + row][next_col + col] = 1
+                else:
+                    board.playground[next_row + row][next_col + col] = -1
+                return next_row + row, next_col + col
 
     def backtrack(self, node: Node, reward):
         node.increment_total_plays()
@@ -228,7 +254,7 @@ class Main:
             mcts = MCTS()
 
             start_time = time.time()
-            while time.time() - start_time < 0.09:
+            while time.time() - start_time < 0.096:
                 test_playground = copy.deepcopy(board)
                 selected_node = mcts.selection_expansion(test_playground, master_node)
                 simulated_reward = mcts.simulate(test_playground, selected_node)
